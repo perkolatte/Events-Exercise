@@ -13,12 +13,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const userInput = colorInput.value.trim();
 
-    // Validate the user's color input by checking if the browser can parse it.
+    // A trick to validate a CSS color string. By assigning the string
+    // to the `color` property of a disconnected element's style object, we
+    // leverage the browser's own CSS parser. If the browser can't parse it,
+    // it leaves the property as an empty string.
     const tempStyle = new Option().style;
     tempStyle.color = userInput;
     if (tempStyle.color === "") {
       alert(`"${userInput}" is not a valid CSS color.`);
-      return; // Abort if the color is invalid.
+      colorInput.value = "";
+      return;
     }
 
     boxColor = userInput;
@@ -33,17 +37,22 @@ document.addEventListener("DOMContentLoaded", function () {
     colorInput.value = "";
   });
 
-  function getContrastColor(mainColor) {
+  function getContrastColor(color) {
+    // Create a temporary, unattached element to have the browser
+    // parse any valid CSS color string into a standard RGB format.
     const tempDiv = document.createElement("div");
-    tempDiv.style.color = mainColor;
+    tempDiv.style.color = color;
     document.body.appendChild(tempDiv);
     const computedColor = window.getComputedStyle(tempDiv).color;
     document.body.removeChild(tempDiv);
 
+    // Calculate the color's perceived brightness (luminance) using the
+    // formula (ITU-R BT.601). This weights RGB values to
+    // better match human perception.
     const [r, g, b] = computedColor.match(/\d+/g).map(Number);
     const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
 
-    // For very dark colors, use "terminal green" for high contrast and style.
+    // For very dark colors (luminance < 40), use "terminal green" for style.
     if (luminance < 40) {
       return "green";
     }
@@ -53,10 +62,11 @@ document.addEventListener("DOMContentLoaded", function () {
       r > 60 && r < 200 && g > 60 && g < 200 && b > 60 && b < 200;
 
     if (isMidRange) {
+      // For mid-range colors, fall back to pure black or white based on luminance.
       return luminance > 128 ? "black" : "white";
     }
 
-    // Otherwise, the simple complementary color is likely sufficient.
+    // For saturated colors, a simple complementary color is usually sufficient.
     return `rgb(${255 - r}, ${255 - g}, ${255 - b})`;
   }
 
@@ -67,24 +77,20 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function addNewBox() {
-    // 1. Create a new div element.
     const newBox = document.createElement("div");
-    // 2. Set its class, id, data-id attribute, text content, and background color.
     newBox.classList.add("box");
     newBox.id = boxIdCounter.toString();
     newBox.textContent = newBox.id;
     applyBoxStyles(newBox);
     newBox.dataset.id = boxIdCounter;
-    // 3. Append it to the boxContainer.
     boxContainer.appendChild(newBox);
-    // 4. Increment the boxIdCounter.
     boxIdCounter++;
   }
 
   newBoxButton.addEventListener("click", addNewBox);
 
   document.addEventListener("keydown", function (event) {
-    // Ignore key presses if the user is typing in the input field.
+    // Ignore key presses if the user is currently typing in the input field.
     if (document.activeElement === colorInput) return;
 
     if (event.key.toLowerCase() === "n") {
@@ -92,13 +98,16 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
+  // Use event delegation for all box interactions. This is more performant
+  // than adding a listener to every single box, especially as more are created.
   ["mouseover", "mouseout", "dblclick"].forEach((eventType) => {
     boxContainer.addEventListener(eventType, handleBoxEvents);
   });
 
   function handleBoxEvents(event) {
     const target = event.target;
-    // Do nothing if the event didn't originate from a box.
+
+    // Ignore events that didn't originate from a .box element (e.g., the container itself).
     if (!target.classList.contains("box")) return;
 
     switch (event.type) {
