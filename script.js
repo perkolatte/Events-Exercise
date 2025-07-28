@@ -27,9 +27,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const boxes = document.getElementsByClassName("box");
 
     for (const box of boxes) {
-      box.style.backgroundColor = boxColor;
-      box.style.color = boxContrastColor;
-      box.style.borderColor = boxContrastColor;
+      applyBoxStyles(box);
     }
 
     colorInput.value = "";
@@ -62,6 +60,12 @@ document.addEventListener("DOMContentLoaded", function () {
     return `rgb(${255 - r}, ${255 - g}, ${255 - b})`;
   }
 
+  function applyBoxStyles(boxElement) {
+    boxElement.style.backgroundColor = boxColor;
+    boxElement.style.color = boxContrastColor;
+    boxElement.style.borderColor = boxContrastColor;
+  }
+
   function addNewBox() {
     // 1. Create a new div element.
     const newBox = document.createElement("div");
@@ -69,9 +73,7 @@ document.addEventListener("DOMContentLoaded", function () {
     newBox.classList.add("box");
     newBox.id = boxIdCounter.toString();
     newBox.textContent = newBox.id;
-    newBox.style.backgroundColor = boxColor;
-    newBox.style.color = boxContrastColor;
-    newBox.style.borderColor = boxContrastColor;
+    applyBoxStyles(newBox);
     newBox.dataset.id = boxIdCounter;
     // 3. Append it to the boxContainer.
     boxContainer.appendChild(newBox);
@@ -90,10 +92,9 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // Use a single, delegated event listener for all box interactions for performance.
-  boxContainer.addEventListener("mouseover", handleBoxEvents);
-  boxContainer.addEventListener("mouseout", handleBoxEvents);
-  boxContainer.addEventListener("dblclick", handleBoxEvents);
+  ["mouseover", "mouseout", "dblclick"].forEach((eventType) => {
+    boxContainer.addEventListener(eventType, handleBoxEvents);
+  });
 
   function handleBoxEvents(event) {
     const target = event.target;
